@@ -1,0 +1,11 @@
+# Used with @ActiveProfiles({"test", "integration"}) for full-stack MockMvc suites.
+# Multipart and other flows cannot reliably pre-compute the raw body hash; SecurityIntegrationTest
+# stays on profile "test" alone to exercise signed requests end-to-end.
+# Repeat encryption key so YAML merge never drops it when this profile is active.
+app:
+  job:
+    process-all-shards: true
+  security:
+    require-request-signing: false
+  encryption:
+    aes-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=

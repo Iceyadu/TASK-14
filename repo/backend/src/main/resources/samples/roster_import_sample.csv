@@ -1,0 +1,4 @@
+student_username,class_name,term_name,student_id_number,guardian_contact,accommodation_notes
+student1,Class 7A,2025-2026 Fall,STU001,parent1@school.local,None
+student2,Class 7A,2025-2026 Fall,STU002,parent2@school.local,Extra time for written exams
+student3,Class 7B,2025-2026 Fall,STU003,parent3@school.local,None

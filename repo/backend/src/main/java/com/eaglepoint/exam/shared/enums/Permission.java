@@ -1,0 +1,35 @@
+package com.eaglepoint.exam.shared.enums;
+
+/**
+ * Fine-grained permissions used for authorization checks.
+ */
+public enum Permission {
+    USER_MANAGE,
+    ROSTER_VIEW,
+    ROSTER_CREATE,
+    ROSTER_IMPORT,
+    ROSTER_EXPORT,
+    ROSTER_DELETE,
+    SESSION_VIEW,
+    SESSION_CREATE,
+    SESSION_EDIT,
+    SESSION_SUBMIT_REVIEW,
+    SESSION_PUBLISH,
+    SESSION_ARCHIVE,
+    ROOM_MANAGE,
+    PROCTOR_ASSIGN,
+    COMPLIANCE_REVIEW,
+    COMPLIANCE_SUBMIT,
+    NOTIFICATION_CREATE,
+    NOTIFICATION_PUBLISH,
+    SUBSCRIPTION_MANAGE,
+    INBOX_VIEW,
+    VERSION_VIEW,
+    VERSION_RESTORE,
+    JOB_MONITOR,
+    JOB_RERUN,
+    ANTICHEAT_REVIEW,
+    AUDIT_VIEW,
+    VIEW_HEALTH_DATA,
+    DEVICE_MANAGE
+}

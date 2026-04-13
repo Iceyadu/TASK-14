@@ -1,0 +1,9 @@
+{
+  "project_type": "fullstack",
+  "prompt": "A Secure Exam Scheduling & Notification Management System for K-12 and district testing offices",
+  "frontend_language": "javascript",
+  "backend_language": "java",
+  "frontend_framework": "vue",
+  "backend_framework": "spring boot",
+  "database": "mysql"
+}

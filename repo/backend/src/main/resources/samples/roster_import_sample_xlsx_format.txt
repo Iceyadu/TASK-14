@@ -1,0 +1,27 @@
+Roster Import XLSX Format Specification
+========================================
+
+The XLSX file must follow the same column structure as the CSV format.
+The first row must be a header row with the following column names (case-insensitive):
+
+  Column A: student_username    (Required) The username of the student in the system.
+  Column B: class_name          (Required) The display name of the class (e.g., "Class 7A").
+  Column C: term_name           (Required) The term identifier (e.g., "2025-2026 Fall").
+  Column D: student_id_number   (Required) The student's school ID number (e.g., "STU001").
+  Column E: guardian_contact    (Optional) Guardian contact information (email or phone).
+  Column F: accommodation_notes (Optional) Any accommodation notes for the student.
+
+Rules:
+- The file must be in .xlsx format (Microsoft Excel Open XML Spreadsheet).
+- Only the first sheet of the workbook is processed.
+- Empty rows are skipped.
+- Leading and trailing whitespace is trimmed from all cell values.
+- Duplicate student_username entries (case-insensitive) within the same file are flagged as errors.
+- The student_username must correspond to an existing user in the system.
+- Numeric cells are converted to string values automatically.
+
+Example data rows (after the header):
+
+  student1  | Class 7A | 2025-2026 Fall | STU001 | parent1@school.local | None
+  student2  | Class 7A | 2025-2026 Fall | STU002 | parent2@school.local | Extra time for written exams
+  student3  | Class 7B | 2025-2026 Fall | STU003 | parent3@school.local | None

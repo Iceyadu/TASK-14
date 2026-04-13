@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:exam_scheduling_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  flyway:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.eaglepoint.exam: DEBUG
+    org.hibernate.SQL: DEBUG
+
+app:
+  security:
+    require-request-signing: true
+    bcrypt-strength: 4
+    session-timeout-minutes: 30
+    max-failed-login-attempts: 5
+    lockout-duration-minutes: 15
+    password-history-count: 5
+    nonce-expiry-seconds: 120
+  encryption:
+    # 32 bytes after Base64 decode (required for AES-256-GCM)
+    aes-key: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+  import:
+    max-file-size-mb: 5
+    batch-size: 100
+  notification:
+    retry-max-attempts: 1
+    retry-delay-seconds: 1
+  job:
+    node-id: test-node
+    poll-interval-seconds: 5

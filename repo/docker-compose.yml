@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-examroot}
+      MYSQL_DATABASE: ${DB_NAME:-exam_scheduling}
+      MYSQL_USER: ${DB_USER:-examuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-exampass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - exam-net
+
+  backend:
+    build: ./backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-exam_scheduling}
+      DB_USER: ${DB_USER:-examuser}
+      DB_PASSWORD: ${DB_PASSWORD:-exampass}
+      APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:-change-this-signing-secret-in-production}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-Q2hhbmdlVGhpc1RvQVJlYWxQcm9kdWN0aW9uS2V5ISE=}
+      WECHAT_ENABLED: ${WECHAT_ENABLED:-false}
+      WECHAT_MODE: ${WECHAT_MODE:-disabled}
+    ports:
+      - "8080:8080"
+    networks:
+      - exam-net
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - exam-net
+
+volumes:
+  mysql_data:
+
+networks:
+  exam-net:
+    driver: bridge
