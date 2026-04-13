@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/mac/Documents/EaglePoint/TASK-14/repo/backend/src -type f -name *.java)",
+      "Bash(find /Users/mac/Documents/EaglePoint/TASK-14/repo/backend/src -type f -name *.sql)",
+      "Bash(./mvnw compile:*)",
+      "Bash(mvn compile:*)",
+      "Bash(mvn clean:*)",
+      "Bash(cd:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(chmod:*)",
+      "Bash(xargs basename:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}
