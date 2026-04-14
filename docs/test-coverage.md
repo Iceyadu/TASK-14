@@ -3,6 +3,8 @@
 ## Coverage Strategy
 Tests are organized by risk priority. High-risk areas get integration tests exercising real service methods with seeded database fixtures. Medium-risk areas get unit tests with focused assertions. Low-risk areas are documented for manual verification.
 
+**Repository layout:** Java unit tests live under `repo/unit_tests/backend/src/test/java/`. API / integration tests live under `repo/API_tests/src/test/java/` (`com.eaglepoint.exam.integration`). Frontend unit specs live under `repo/unit_tests/frontend/` (Vitest includes them from `repo/frontend/vite.config.js`).
+
 ## Risk-First Coverage Mapping
 
 | # | Requirement / Risk Point | Mapped Test Case(s) | Key Assertion / Fixture / Mock | Coverage | Gap | Min Test Addition |
