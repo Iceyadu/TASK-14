@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import SubscriptionSettings from '../../src/views/notifications/SubscriptionSettings.vue'
+import SubscriptionSettings from '../../frontend/src/views/notifications/SubscriptionSettings.vue'
 
 /**
  * Unit tests for the SubscriptionSettings component covering event type rendering,
@@ -12,7 +12,7 @@ import SubscriptionSettings from '../../src/views/notifications/SubscriptionSett
 const mockGetSubscriptions = vi.fn()
 const mockUpdateSubscriptions = vi.fn()
 
-vi.mock('../../src/api/client.js', () => ({
+vi.mock('../../frontend/src/api/client.js', () => ({
   notificationApi: {
     getSubscriptions: (...args) => mockGetSubscriptions(...args),
     updateSubscriptions: (...args) => mockUpdateSubscriptions(...args),

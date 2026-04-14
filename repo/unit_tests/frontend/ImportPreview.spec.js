@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import ImportPreview from '../../src/components/import/ImportPreview.vue'
+import ImportPreview from '../../frontend/src/components/import/ImportPreview.vue'
 
 /**
  * Unit tests for the ImportPreview component covering valid/invalid row styling,

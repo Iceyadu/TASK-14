@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
-import { useAuthStore } from '../../src/stores/auth.js'
+import { useAuthStore } from '../../frontend/src/stores/auth.js'
 
 /**
  * Unit tests for the Vue Router navigation guards covering authentication

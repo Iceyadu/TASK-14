@@ -122,6 +122,14 @@ chmod +x run_tests.sh
 - **Frontend unit tests**: Run with Vitest
 - **API integration tests**: Spring Boot tests with `test` + `integration` profiles (signing relaxed for MockMvc); `SecurityIntegrationTest` uses `test` only and exercises request signing. Integration tests set a valid Base64 AES key so local `AES_ENCRYPTION_KEY` env values cannot break the context.
 
+### Where tests live
+
+- **`unit_tests/backend/src/test/java/`** — Java unit tests, on the backend test classpath via `build-helper-maven-plugin`. Default `mvn test` skips `**/integration/**`.
+- **`unit_tests/frontend/`** — Vitest specs (`*.spec.js`); included from `frontend/vite.config.js`.
+- **`API_tests/src/test/java/`** — API / integration tests (`com.eaglepoint.exam.integration.*`).
+
+`run_tests.sh` always runs Maven and Vitest **inside Docker** and mounts the full repository so `backend/`, `frontend/`, `unit_tests/`, and `API_tests/` share one tree.
+
 ## Default Credentials
 
 | Username | Password         | Role                  |

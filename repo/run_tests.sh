@@ -1,13 +1,14 @@
 #!/bin/bash
 # Exam Scheduling System - Docker-based Test Runner
 # Usage: ./run_tests.sh [backend|frontend|api|all]
+# Mounts the full repo so unit_tests/, API_tests/, and backend/ share one tree.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_DIR="$SCRIPT_DIR/backend"
-FRONTEND_DIR="$SCRIPT_DIR/frontend"
 ROOT_DIR="$SCRIPT_DIR"
+BACKEND_DIR="$ROOT_DIR/backend"
+FRONTEND_DIR="$ROOT_DIR/frontend"
 
 require_docker() {
     if ! command -v docker >/dev/null 2>&1; then
@@ -21,21 +22,21 @@ require_docker() {
 }
 
 run_backend_tests() {
-    echo "=== Running Backend Unit Tests (Docker) ==="
+    echo "=== Running Backend Unit Tests (Docker, unit_tests/backend + default excludes) ==="
     docker run --rm \
-        -v "$BACKEND_DIR:/work" \
-        -w /work \
+        -v "$ROOT_DIR:/repo" \
+        -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test -Dtest=com.eaglepoint.exam.** -pl . --no-transfer-progress 2>&1 \
-        || echo "Backend tests completed with failures"
+        mvn test --no-transfer-progress 2>&1 \
+        || echo "Backend unit tests completed with failures"
     echo ""
 }
 
 run_frontend_tests() {
-    echo "=== Running Frontend Unit Tests (Docker) ==="
+    echo "=== Running Frontend Unit Tests (Docker, unit_tests/frontend) ==="
     docker run --rm \
-        -v "$FRONTEND_DIR:/work" \
-        -w /work \
+        -v "$ROOT_DIR:/repo" \
+        -w /repo/frontend \
         node:20-alpine \
         sh -lc "npm ci && npx vitest run --reporter=verbose" 2>&1 \
         || echo "Frontend tests completed with failures"
@@ -43,12 +44,12 @@ run_frontend_tests() {
 }
 
 run_api_tests() {
-    echo "=== Running API Integration Tests (Docker, package com.eaglepoint.exam.integration) ==="
+    echo "=== Running API Integration Tests (Docker, API_tests -> com.eaglepoint.exam.integration) ==="
     docker run --rm \
-        -v "$BACKEND_DIR:/work" \
-        -w /work \
+        -v "$ROOT_DIR:/repo" \
+        -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test -Dtest=com.eaglepoint.exam.integration.** -pl . --no-transfer-progress 2>&1 \
+        mvn test -Dtest='com.eaglepoint.exam.integration.**' --no-transfer-progress 2>&1 \
         || echo "API tests completed with failures"
     echo ""
 }

@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
-import VersionHistory from '../../src/components/versioning/VersionHistory.vue'
-import ConfirmDialog from '../../src/components/shared/ConfirmDialog.vue'
+import VersionHistory from '../../frontend/src/components/versioning/VersionHistory.vue'
+import ConfirmDialog from '../../frontend/src/components/shared/ConfirmDialog.vue'
 
 /**
  * Unit tests for the VersionHistory (compare) component covering side-by-side
@@ -14,7 +14,7 @@ const mockList = vi.fn()
 const mockCompare = vi.fn()
 const mockRestore = vi.fn()
 
-vi.mock('../../src/api/client.js', () => ({
+vi.mock('../../frontend/src/api/client.js', () => ({
   versionApi: {
     list: (...args) => mockList(...args),
     compare: (...args) => mockCompare(...args),

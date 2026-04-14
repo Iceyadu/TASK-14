@@ -36,7 +36,8 @@ import java.util.Optional;
  * Expected headers: {@code X-Timestamp}, {@code X-Nonce}, {@code X-Signature}.
  * <p>
  * Signature is computed over: method + "\n" + path + "\n" + timestamp + "\n" +
- * nonce + "\n" + SHA256(body).
+ * nonce + "\n" + SHA256(body). The path is the servlet path plus the raw query
+ * string when present (same canonical string the SPA client signs).
  */
 public class RequestSigningFilter extends OncePerRequestFilter {
 
@@ -143,9 +144,9 @@ public class RequestSigningFilter extends OncePerRequestFilter {
         byte[] body = wrappedRequest.getInputStream().readAllBytes();
         String bodyHash = sha256Hex(body);
 
-        // Build signing string
+        // Build signing string (path must match client: servlet path + raw query string, if any)
         String method = wrappedRequest.getMethod();
-        String path = wrappedRequest.getServletPath();
+        String path = canonicalSigningPath(wrappedRequest);
         String signingString = method + "\n" + path + "\n" + timestampStr + "\n" + nonce + "\n" + bodyHash;
 
         // Compute expected signature
@@ -177,6 +178,21 @@ public class RequestSigningFilter extends OncePerRequestFilter {
         nonceReplayRepository.save(new NonceReplay(nonce, nonceExpiresAt));
 
         filterChain.doFilter(wrappedRequest, response);
+    }
+
+    /**
+     * Same canonical path the Vue client signs: {@code pathname + search} (search includes {@code ?}).
+     */
+    static String canonicalSigningPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath == null) {
+            servletPath = "";
+        }
+        String query = request.getQueryString();
+        if (query != null && !query.isEmpty()) {
+            return servletPath + "?" + query;
+        }
+        return servletPath;
     }
 
     private static String bytesToHex(byte[] bytes) {

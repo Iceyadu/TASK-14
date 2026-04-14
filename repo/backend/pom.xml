@@ -123,7 +123,8 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>${project.basedir}/../unit_tests/backend</source>
+                                <source>${project.basedir}/../unit_tests/backend/src/test/java</source>
+                                <source>${project.basedir}/../API_tests/src/test/java</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -134,10 +135,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>-Dnet.bytebuddy.experimental=true</argLine>
-                    <!-- Integration tests live under src/test/java/.../integration; run explicitly:
+                    <!-- API / integration tests live under ../API_tests/.../integration; run with:
                          mvn test -Dtest='com.eaglepoint.exam.integration.**' -->
                     <excludes>
-                        <exclude>com/eaglepoint/exam/integration/**/*.java</exclude>
+                        <exclude>**/integration/**</exclude>
                     </excludes>
                 </configuration>
             </plugin>

@@ -33,8 +33,16 @@ apiClient.interceptors.request.use((config) => {
       if (session.signingKey) {
         const timestamp = Math.floor(Date.now() / 1000).toString()
         const nonce = generateNonce()
-        const url = new URL(config.url, config.baseURL || window.location.origin)
-        const path = url.pathname + (url.search || '')
+        // Match server RequestSigningFilter: path + raw query. getUri includes axios-serialized params.
+        const resolved = apiClient.getUri(config)
+        let path
+        if (/^https?:\/\//i.test(resolved)) {
+          const u = new URL(resolved)
+          path = u.pathname + (u.search || '')
+        } else {
+          const u = new URL(resolved, 'http://localhost')
+          path = u.pathname + (u.search || '')
+        }
         const body = config.data ? (typeof config.data === 'string' ? config.data : JSON.stringify(config.data)) : ''
         const signature = computeSignature(session.signingKey, config.method, path, timestamp, nonce, body)
 

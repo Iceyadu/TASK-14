@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import DataTable from '../../src/components/shared/DataTable.vue'
+import DataTable from '../../frontend/src/components/shared/DataTable.vue'
 
 /**
  * Unit tests for the DataTable component covering loading, empty, error,

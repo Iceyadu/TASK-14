@@ -10,7 +10,7 @@ import CryptoJS from 'crypto-js'
 // Mock axios to capture request config and avoid real HTTP calls in jsdom
 vi.mock('axios', () => {
   const instance = {
-    defaults: { headers: { common: {} } },
+    defaults: { headers: { common: {} }, baseURL: '/api' },
     interceptors: {
       request: { use: vi.fn(), eject: vi.fn() },
       response: { use: vi.fn(), eject: vi.fn() }
@@ -19,6 +19,18 @@ vi.mock('axios', () => {
     post: vi.fn().mockResolvedValue({ data: {} }),
     put: vi.fn().mockResolvedValue({ data: {} }),
     delete: vi.fn().mockResolvedValue({ data: {} }),
+    /** Minimal axios.getUri behavior for signing path (path + serialized params). */
+    getUri(config) {
+      const base = (config.baseURL ?? instance.defaults.baseURL ?? '').replace(/\/$/, '') || ''
+      const path = config.url?.startsWith('/') ? config.url : `/${config.url || ''}`
+      const params = config.params
+      if (!params || Object.keys(params).length === 0) {
+        return `${base}${path}`
+      }
+      const qs = new URLSearchParams(params).toString()
+      const joiner = path.includes('?') ? '&' : '?'
+      return `${base}${path}${joiner}${qs}`
+    }
   }
   const axiosMock = {
     create: vi.fn(() => instance)
@@ -36,7 +48,7 @@ beforeEach(() => {
 
 describe('API Client Path Contracts', () => {
   it('testAuthLoginPath', async () => {
-    const { authApi } = await import('../../src/api/client.js')
+    const { authApi } = await import('../../frontend/src/api/client.js')
     await authApi.login({ username: 'test', password: 'pass', deviceFingerprint: 'fp' })
 
     expect(mockInstance.post).toHaveBeenCalledWith(
@@ -46,7 +58,7 @@ describe('API Client Path Contracts', () => {
   })
 
   it('testRosterListPath', async () => {
-    const { rosterApi } = await import('../../src/api/client.js')
+    const { rosterApi } = await import('../../frontend/src/api/client.js')
     await rosterApi.list({ page: 1 })
 
     const [url, config] = mockInstance.get.mock.calls.at(-1)
@@ -55,7 +67,7 @@ describe('API Client Path Contracts', () => {
   })
 
   it('testExamSessionPublishPath', async () => {
-    const { examSessionApi } = await import('../../src/api/client.js')
+    const { examSessionApi } = await import('../../frontend/src/api/client.js')
     await examSessionApi.publish(42, 'idem-key-1')
 
     expect(mockInstance.post).toHaveBeenCalledWith(
@@ -68,7 +80,7 @@ describe('API Client Path Contracts', () => {
   })
 
   it('testNotificationInboxPath', async () => {
-    const { notificationApi } = await import('../../src/api/client.js')
+    const { notificationApi } = await import('../../frontend/src/api/client.js')
     await notificationApi.getInbox({ page: 1 })
 
     const [url, config] = mockInstance.get.mock.calls.at(-1)

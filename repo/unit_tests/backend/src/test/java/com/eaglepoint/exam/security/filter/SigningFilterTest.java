@@ -203,4 +203,31 @@ class SigningFilterTest {
 
         assertTrue(filter.shouldNotFilter(request));
     }
+
+    @Test
+    void testValidSignatureWithQueryString() throws Exception {
+        String timestamp = String.valueOf(Instant.now().getEpochSecond());
+        String nonce = UUID.randomUUID().toString();
+        String body = "";
+        String pathWithQuery = "/api/exam-sessions?campusId=5";
+        String signature = computeHmacSignature("GET", pathWithQuery, timestamp, nonce, body);
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/exam-sessions");
+        request.setServletPath("/api/exam-sessions");
+        request.setQueryString("campusId=5");
+        request.addHeader("X-Timestamp", timestamp);
+        request.addHeader("X-Nonce", nonce);
+        request.addHeader("X-Signature", signature);
+        request.addHeader("Authorization", "Bearer " + SESSION_TOKEN);
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(sessionRepository.findBySessionToken(SESSION_TOKEN)).thenReturn(Optional.of(createSession()));
+        when(nonceReplayRepository.existsById(nonce)).thenReturn(false);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(any(), eq(response));
+        verify(nonceReplayRepository).save(any());
+    }
 }
