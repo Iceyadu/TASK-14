@@ -28,6 +28,136 @@ Content-Type: application/json
 }
 ```
 
+## Data Shape Conventions
+
+### Scalar Types
+- `id`: `long` (positive integer)
+- `datetime`: ISO-8601 string (`YYYY-MM-DDTHH:mm:ss`)
+- `date`: `YYYY-MM-DD`
+- `time`: `HH:mm[:ss]`
+- `enum`: uppercase string from endpoint-specific allowed values
+
+### Standard Input Shapes
+```json
+{
+  "page": 1,
+  "size": 20,
+  "search": "optional text",
+  "sortBy": "createdAt",
+  "sortDir": "asc|desc"
+}
+```
+
+```json
+{
+  "idempotencyKey": "uuid-or-unique-string"
+}
+```
+
+### Standard Output Shapes
+```json
+{
+  "id": 123,
+  "createdAt": "2026-04-13T12:30:00",
+  "updatedAt": "2026-04-13T12:45:00"
+}
+```
+
+```json
+{
+  "items": [
+    { "id": 1, "name": "example" }
+  ],
+  "pagination": {
+    "page": 1,
+    "size": 20,
+    "total": 100,
+    "totalPages": 5
+  }
+}
+```
+
+### Error Shape
+```json
+{
+  "traceId": "uuid",
+  "status": "error",
+  "message": "Validation failed",
+  "errors": [
+    { "field": "name", "message": "Required" }
+  ]
+}
+```
+
+### Module-Specific I/O Examples
+
+#### Exam Session Create Input
+```json
+{
+  "name": "Midterm Mathematics",
+  "termId": 2,
+  "courseId": 1,
+  "campusId": 1,
+  "examDate": "2026-05-12",
+  "startTime": "09:00",
+  "endTime": "11:00",
+  "roomId": 3,
+  "classIds": [1, 2]
+}
+```
+
+#### Exam Session Output
+```json
+{
+  "id": 88,
+  "name": "Midterm Mathematics",
+  "status": "DRAFT",
+  "termId": 2,
+  "courseId": 1,
+  "campusId": 1,
+  "roomId": 3,
+  "examDate": "2026-05-12",
+  "startTime": "09:00:00",
+  "endTime": "11:00:00",
+  "classIds": [1, 2]
+}
+```
+
+#### Roster Import Preview Output
+```json
+{
+  "jobId": 44,
+  "status": "PARTIALLY_VALID",
+  "totalRows": 3,
+  "validRows": [
+    { "rowNumber": 1, "rowData": { "student_username": "student.chen" } }
+  ],
+  "invalidRows": [
+    {
+      "rowNumber": 2,
+      "rowData": { "student_username": "student.liu" },
+      "errors": [
+        { "field": "class_name", "errorReason": "No class found with name: Class X" }
+      ]
+    }
+  ]
+}
+```
+
+#### Notification Output
+```json
+{
+  "id": 55,
+  "title": "Schedule Change",
+  "content": "Exam moved to Monday",
+  "status": "DRAFT",
+  "eventType": "SCHEDULE_CHANGE",
+  "targetType": "CLASS",
+  "targetIds": [1],
+  "complianceApproved": false
+}
+```
+
 ## HTTP Status Semantics
 - 200: Success (all create/update operations return 200 with the created/updated resource)
 - 400: Validation error (field-level details in errors array)

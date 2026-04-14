@@ -2,7 +2,7 @@
 
 ## 1. Verdict
 - **Overall conclusion: Partial Pass**
-- **Why:** Compared with the prior audit baseline, multiple configuration/documentation consistency items are now aligned (rate-limit config binding, encryption key format guidance, and test-coverage phrasing). The remaining material risks are narrower and concentrated in two implementation-contract areas.
+- **Why:** Compared with the prior audit baseline, multiple configuration/documentation consistency items are now aligned (rate-limit config binding, encryption key format guidance, test-coverage phrasing, and delivery-status schema/value alignment). The remaining material risk is now concentrated in request-signing canonicalization for query-string paths.
 
 ## 2. Scope and Static Verification Boundary
 - **Reviewed:** Key backend security/notification files, schema migration, frontend signing client, README/env/compose docs, and prior audit artifacts in `.tmp`.
@@ -31,7 +31,7 @@
 ### 4.2 Delivery Completeness
 #### 4.2.1 Core explicit requirements coverage
 - **Conclusion: Partial Pass**
-- **Rationale:** Coverage is broad, with one remaining high-impact persistence contract defect in notification delivery status.
+- **Rationale:** Coverage is broad; the previously flagged delivery-status persistence contract defect is resolved.
 
 #### 4.2.2 End-to-end 0→1 deliverable
 - **Conclusion: Partial Pass**
@@ -63,17 +63,8 @@
 
 ## 5. Issues / Suggestions (Severity-Rated)
 
-### High
-1. **Title:** `delivery_status.channel` enum still incompatible with `SKIPPED` writes  
-   **Conclusion:** Not fixed  
-   **Evidence:**
-   - Code writes `SKIPPED`: `repo/backend/src/main/java/com/eaglepoint/exam/notifications/service/NotificationDeliveryService.java:104-105`
-   - Schema enum allows only `WECHAT`,`IN_APP`: `repo/backend/src/main/resources/db/migration/V1__schema.sql:243`  
-   **Impact:** Opt-out path can fail persistence at DB level.  
-   **Minimum actionable fix:** Add `SKIPPED` to enum (or map opt-out to allowed channel with status-only semantics).
-
 ### Medium
-2. **Title:** Request signing canonical path mismatch for query-string requests  
+1. **Title:** Request signing canonical path mismatch for query-string requests  
    **Conclusion:** Partially fixed area still open  
    **Evidence:**
    - Frontend signs `pathname + search`: `repo/frontend/src/api/client.js:36-39`
@@ -103,15 +94,14 @@
 ### 8.2 Coverage Mapping (round-2 critical deltas)
 | Requirement / Risk Point | Mapped Test/Code Evidence | Coverage Assessment | Gap | Minimum Test Addition |
 |---|---|---|---|---|
-| Delivery opt-out status persistence | `NotificationDeliveryService` + schema enum (`V1__schema.sql`) | **Insufficient** | DB contract mismatch not protected | Add integration test that asserts opt-out write succeeds with schema constraints |
 | Signing canonical path with query params | `client.js` + `RequestSigningFilter` path build | **Insufficient** | No proof that query-string signed requests pass consistently | Add signing integration tests with query-string endpoints |
 
 ### 8.3 Security Coverage Audit
-- Baseline auth/authorization tests exist, but these two contract-level security/reliability edge cases remain under-covered.
+- Baseline auth/authorization tests exist; query-string signing canonicalization remains under-covered.
 
 ### 8.4 Final Coverage Judgment
 - **Partial Pass**
-- Major baseline flows are covered; unresolved edge-case contract mismatches mean severe defects could still escape if only happy paths are tested.
+- Major baseline flows are covered; unresolved signing canonicalization edge cases can still escape if only happy paths are tested.
 
 ## 9. Final Notes
 - Round 2 shows meaningful convergence and fewer open issues than prior audit.

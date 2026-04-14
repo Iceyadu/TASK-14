@@ -1,54 +1,59 @@
 #!/bin/bash
-# Exam Scheduling System - Test Runner
+# Exam Scheduling System - Docker-based Test Runner
 # Usage: ./run_tests.sh [backend|frontend|api|all]
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$SCRIPT_DIR/backend"
+FRONTEND_DIR="$SCRIPT_DIR/frontend"
+ROOT_DIR="$SCRIPT_DIR"
 
-run_maven_tests() {
-    local args="$1"
-    if [ -x "./mvnw" ]; then
-        ./mvnw test ${args} --no-transfer-progress 2>&1
-    elif command -v mvn >/dev/null 2>&1; then
-        mvn test ${args} --no-transfer-progress 2>&1
-    else
-        echo "Neither ./mvnw nor mvn is available in $(pwd)"
-        return 127
+require_docker() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "docker not found; install Docker Desktop / Engine first"
+        exit 127
+    fi
+    if ! docker compose version >/dev/null 2>&1; then
+        echo "docker compose not available; install Docker Compose v2 plugin"
+        exit 127
     fi
 }
 
 run_backend_tests() {
-    echo "=== Running Backend Unit Tests ==="
-    cd "$SCRIPT_DIR/backend"
-    run_maven_tests "-Dtest=com.eaglepoint.exam.** -pl ." || echo "Backend tests completed with failures"
+    echo "=== Running Backend Unit Tests (Docker) ==="
+    docker run --rm \
+        -v "$BACKEND_DIR:/work" \
+        -w /work \
+        maven:3.9.6-eclipse-temurin-17 \
+        mvn test -Dtest=com.eaglepoint.exam.** -pl . --no-transfer-progress 2>&1 \
+        || echo "Backend tests completed with failures"
     echo ""
 }
 
 run_frontend_tests() {
-    echo "=== Running Frontend Unit Tests ==="
-    cd "$SCRIPT_DIR/frontend"
-    if ! command -v npm >/dev/null 2>&1; then
-        echo "npm not found; install Node.js/npm to run frontend tests"
-        echo ""
-        return 127
-    fi
-
-    if [ ! -d "node_modules" ] || [ ! -x "node_modules/.bin/vitest" ]; then
-        echo "Installing frontend dependencies (npm ci)..."
-        npm ci 2>&1 || echo "npm ci completed with failures"
-    fi
-
-    npx vitest run --reporter=verbose 2>&1 || echo "Frontend tests completed with failures"
+    echo "=== Running Frontend Unit Tests (Docker) ==="
+    docker run --rm \
+        -v "$FRONTEND_DIR:/work" \
+        -w /work \
+        node:20-alpine \
+        sh -lc "npm ci && npx vitest run --reporter=verbose" 2>&1 \
+        || echo "Frontend tests completed with failures"
     echo ""
 }
 
 run_api_tests() {
-    echo "=== Running API Integration Tests (package com.eaglepoint.exam.integration) ==="
-    cd "$SCRIPT_DIR/backend"
-    run_maven_tests "-Dtest=com.eaglepoint.exam.integration.** -pl ." || echo "API tests completed with failures"
+    echo "=== Running API Integration Tests (Docker, package com.eaglepoint.exam.integration) ==="
+    docker run --rm \
+        -v "$BACKEND_DIR:/work" \
+        -w /work \
+        maven:3.9.6-eclipse-temurin-17 \
+        mvn test -Dtest=com.eaglepoint.exam.integration.** -pl . --no-transfer-progress 2>&1 \
+        || echo "API tests completed with failures"
     echo ""
 }
+
+require_docker
 
 case "${1:-all}" in
     backend)
