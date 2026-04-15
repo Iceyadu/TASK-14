@@ -90,14 +90,22 @@ describe('Admin queue view flows', () => {
     await flushPromises()
 
     await wrapper.get('button.btn-danger').trigger('click')
-    await wrapper.get('.dialog-actions .btn-danger').trigger('click')
-    expect(wrapper.text()).toContain('A comment is required when rejecting.')
+    await flushPromises()
+    let rejectBtn = document.body.querySelector('.dialog-actions .btn-danger')
+    expect(rejectBtn).toBeTruthy()
+    rejectBtn.dispatchEvent(new Event('click', { bubbles: true }))
+    await flushPromises()
+    expect(document.body.textContent).toContain('A comment is required when rejecting.')
 
-    await wrapper.get('textarea').setValue('Rejecting per policy')
-    await wrapper.get('.dialog-actions .btn-danger').trigger('click')
+    const commentBox = document.body.querySelector('textarea')
+    commentBox.value = 'Rejecting per policy'
+    commentBox.dispatchEvent(new Event('input', { bubbles: true }))
+    rejectBtn = document.body.querySelector('.dialog-actions .btn-danger')
+    rejectBtn.dispatchEvent(new Event('click', { bubbles: true }))
     await flushPromises()
 
     expect(fixtures.complianceApi.reject).toHaveBeenCalledWith(10, { comment: 'Rejecting per policy' })
+    wrapper.unmount()
   })
 
   it('JobMonitor rerun and cancel actions call APIs', async () => {
@@ -121,6 +129,7 @@ describe('Admin queue view flows', () => {
     await buttons.find((b) => b.text() === 'Cancel').trigger('click')
     await flushPromises()
     expect(fixtures.jobApi.cancel).toHaveBeenCalledWith(22)
+    wrapper.unmount()
   })
 
   it('AntiCheatQueue review requires comment and submits decision', async () => {
@@ -137,16 +146,24 @@ describe('Admin queue view flows', () => {
     await flushPromises()
 
     await wrapper.get('button.btn-primary').trigger('click')
-    await wrapper.get('.dialog-actions .btn-success').trigger('click')
-    expect(wrapper.text()).toContain('A comment is required.')
+    await flushPromises()
+    let submitBtn = document.body.querySelector('.dialog-actions .btn-success')
+    expect(submitBtn).toBeTruthy()
+    submitBtn.dispatchEvent(new Event('click', { bubbles: true }))
+    await flushPromises()
+    expect(document.body.textContent).toContain('A comment is required.')
 
-    await wrapper.get('textarea').setValue('Dismissed after manual review')
-    await wrapper.get('.dialog-actions .btn-success').trigger('click')
+    const commentBox = document.body.querySelector('textarea')
+    commentBox.value = 'Dismissed after manual review'
+    commentBox.dispatchEvent(new Event('input', { bubbles: true }))
+    submitBtn = document.body.querySelector('.dialog-actions .btn-success')
+    submitBtn.dispatchEvent(new Event('click', { bubbles: true }))
     await flushPromises()
 
     expect(fixtures.antiCheatApi.reviewFlag).toHaveBeenCalledWith(31, {
       decision: 'DISMISSED',
       comment: 'Dismissed after manual review'
     })
+    wrapper.unmount()
   })
 })

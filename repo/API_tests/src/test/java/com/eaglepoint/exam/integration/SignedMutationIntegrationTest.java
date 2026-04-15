@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -95,11 +96,8 @@ class SignedMutationIntegrationTest {
         String token = creds[0];
         String signingKey = creds[1];
 
-        String campusBody = """
-                {
-                  "name": "Signed Campus %d"
-                }
-                """.formatted(System.currentTimeMillis());
+        String campusName = "Signed Campus " + System.currentTimeMillis();
+        String campusBody = objectMapper.writeValueAsString(Map.of("name", campusName));
 
         // Same authenticated mutation without signing headers should be rejected.
         mockMvc.perform(post("/api/campuses")
@@ -124,14 +122,12 @@ class SignedMutationIntegrationTest {
                 .get("data").get("id").asLong();
 
         String username = "signed_user_" + System.currentTimeMillis();
-        String userCreateBody = """
-                {
-                  "username": "%s",
-                  "password": "Student@123456",
-                  "fullName": "Signed User",
-                  "role": "STUDENT"
-                }
-                """.formatted(username);
+        String userCreateBody = objectMapper.writeValueAsString(Map.of(
+                "username", username,
+                "password", "Student@123456",
+                "fullName", "Signed User",
+                "role", "STUDENT"
+        ));
 
         MockHttpServletRequestBuilder signedUserCreate = SigningTestHelper.sign(
                 post("/api/users")
@@ -158,13 +154,11 @@ class SignedMutationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.allowConcurrentSessions").value(true));
 
-        String campusUpdateBody = """
-                {
-                  "id": %d,
-                  "name": "Signed Campus Updated",
-                  "status": "ACTIVE"
-                }
-                """.formatted(campusId);
+        String campusUpdateBody = objectMapper.writeValueAsString(Map.of(
+                "id", campusId,
+                "name", "Signed Campus Updated",
+                "status", "ACTIVE"
+        ));
         MockHttpServletRequestBuilder signedCampusUpdate = SigningTestHelper.sign(
                 put("/api/campuses/" + campusId)
                         .header("Authorization", "Bearer " + token)

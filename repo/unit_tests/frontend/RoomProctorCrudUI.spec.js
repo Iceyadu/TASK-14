@@ -64,6 +64,7 @@ describe('RoomList CRUD UI', () => {
     expect(fixtures.roomApi.listCampuses).toHaveBeenCalled()
     expect(fixtures.roomApi.listRooms).toHaveBeenCalledWith(1)
     expect(wrapper.findAll('.row-slot').length).toBe(2)
+    wrapper.unmount()
   })
 
   it('edit dialog opens with room prefilled and cancels without API call', async () => {
@@ -75,13 +76,17 @@ describe('RoomList CRUD UI', () => {
 
     const editButtons = wrapper.findAll('button.btn-secondary.btn-sm')
     await editButtons[0].trigger('click')
+    await flushPromises()
 
-    expect(wrapper.find('.dialog-box').exists()).toBe(true)
-    expect(wrapper.find('.dialog-box input').element.value).toBe('Lab A')
+    const dialog = document.body.querySelector('.dialog-box')
+    expect(dialog).toBeTruthy()
+    expect(dialog.querySelector('input').value).toBe('Lab A')
 
-    await wrapper.find('.dialog-box .btn-secondary').trigger('click')
-    expect(wrapper.find('.dialog-box').exists()).toBe(false)
+    dialog.querySelector('.btn-secondary').dispatchEvent(new Event('click', { bubbles: true }))
+    await flushPromises()
+    expect(document.body.querySelector('.dialog-box')).toBeNull()
     expect(fixtures.roomApi.updateRoom).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('edit dialog shows validation error when name is cleared', async () => {
@@ -92,15 +97,17 @@ describe('RoomList CRUD UI', () => {
     await flushPromises()
 
     await wrapper.findAll('button.btn-secondary.btn-sm')[0].trigger('click')
-
-    const nameInput = wrapper.find('.dialog-box input')
-    await nameInput.setValue('')
-
-    await wrapper.find('.dialog-box form').trigger('submit.prevent')
+    await flushPromises()
+    const dialog = document.body.querySelector('.dialog-box')
+    const nameInput = dialog.querySelector('input')
+    nameInput.value = ''
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }))
+    dialog.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Room name is required.')
+    expect(document.body.textContent).toContain('Room name is required.')
     expect(fixtures.roomApi.updateRoom).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('edit dialog submits updated name and calls updateRoom', async () => {
@@ -111,16 +118,18 @@ describe('RoomList CRUD UI', () => {
     await flushPromises()
 
     await wrapper.findAll('button.btn-secondary.btn-sm')[0].trigger('click')
-
-    const nameInput = wrapper.find('.dialog-box input')
-    await nameInput.setValue('Lab A Renamed')
-
-    await wrapper.find('.dialog-box form').trigger('submit.prevent')
+    await flushPromises()
+    const dialog = document.body.querySelector('.dialog-box')
+    const nameInput = dialog.querySelector('input')
+    nameInput.value = 'Lab A Renamed'
+    nameInput.dispatchEvent(new Event('input', { bubbles: true }))
+    dialog.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
     expect(fixtures.roomApi.updateRoom).toHaveBeenCalledWith(10, expect.objectContaining({
       name: 'Lab A Renamed'
     }))
+    wrapper.unmount()
   })
 })
 
@@ -149,10 +158,13 @@ describe('ProctorList validation UI', () => {
     await flushPromises()
 
     await wrapper.get('button.btn-primary').trigger('click')
-    await wrapper.get('.dialog-actions .btn-primary').trigger('click')
+    await flushPromises()
+    const dialog = document.body.querySelector('.dialog-box')
+    dialog.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Please select both a proctor and a session.')
+    expect(document.body.textContent).toContain('Please select both a proctor and a session.')
     expect(fixtures.proctorApi.create).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 })

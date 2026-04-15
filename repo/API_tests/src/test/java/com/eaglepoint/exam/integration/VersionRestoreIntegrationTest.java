@@ -349,7 +349,16 @@ class VersionRestoreIntegrationTest {
                 .andReturn();
 
         JsonNode reviewsJson = objectMapper.readTree(reviewsResult.getResponse().getContentAsString());
-        Long reviewId = reviewsJson.get("data").get(0).get("id").asLong();
+        JsonNode reviews = reviewsJson.get("data");
+        Long reviewId = null;
+        for (JsonNode review : reviews) {
+            if ("ExamSession".equals(review.get("entityType").asText()) &&
+                    sessionId.equals(review.get("entityId").asLong())) {
+                reviewId = review.get("id").asLong();
+                break;
+            }
+        }
+        assertThat(reviewId).as("review for created exam session").isNotNull();
 
         ReviewDecisionRequest approveRequest = new ReviewDecisionRequest();
         approveRequest.setComment("Approved");

@@ -103,13 +103,19 @@ describe('Admin CRUD failure-path validations', () => {
     await flushPromises()
 
     await wrapper.get('button.btn-primary').trigger('click')
-    const inputs = wrapper.findAll('.dialog-box input')
-    await inputs[0].setValue('new_user_no_pw')
-    await inputs[1].setValue('No Password User')
-    await wrapper.get('.dialog-box form').trigger('submit.prevent')
+    await flushPromises()
+    const dialog = document.body.querySelector('.dialog-box')
+    expect(dialog).toBeTruthy()
+    const inputs = dialog.querySelectorAll('input')
+    inputs[0].value = 'new_user_no_pw'
+    inputs[0].dispatchEvent(new Event('input'))
+    inputs[1].value = 'No Password User'
+    inputs[1].dispatchEvent(new Event('input'))
+    dialog.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
-    expect(wrapper.text()).toContain('Password is required for new users.')
+    expect(document.body.textContent).toContain('Password is required for new users.')
     expect(fixtures.userApi.create).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 })

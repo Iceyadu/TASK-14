@@ -7,20 +7,25 @@ import com.eaglepoint.exam.security.repository.SessionRepository;
 import com.eaglepoint.exam.shared.dto.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -131,17 +136,10 @@ public class RequestSigningFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Read body for signature computation
-        ContentCachingRequestWrapper wrappedRequest;
-        if (request instanceof ContentCachingRequestWrapper) {
-            wrappedRequest = (ContentCachingRequestWrapper) request;
-        } else {
-            wrappedRequest = new ContentCachingRequestWrapper(request);
-        }
-
-        // We need to read the body to compute the hash. For ContentCachingRequestWrapper
-        // the content is available after the filter chain, so we force a read.
-        byte[] body = wrappedRequest.getInputStream().readAllBytes();
+        // Read body for signature computation and preserve it for downstream
+        // request deserialization.
+        byte[] body = request.getInputStream().readAllBytes();
+        HttpServletRequest wrappedRequest = new CachedBodyRequest(request, body);
         String bodyHash = sha256Hex(body);
 
         // Build signing string (path must match client: servlet path + raw query string, if any)
@@ -178,6 +176,46 @@ public class RequestSigningFilter extends OncePerRequestFilter {
         nonceReplayRepository.save(new NonceReplay(nonce, nonceExpiresAt));
 
         filterChain.doFilter(wrappedRequest, response);
+    }
+
+    private static final class CachedBodyRequest extends HttpServletRequestWrapper {
+        private final byte[] cachedBody;
+
+        private CachedBodyRequest(HttpServletRequest request, byte[] cachedBody) {
+            super(request);
+            this.cachedBody = cachedBody != null ? cachedBody : new byte[0];
+        }
+
+        @Override
+        public ServletInputStream getInputStream() {
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(cachedBody);
+            return new ServletInputStream() {
+                @Override
+                public int read() {
+                    return inputStream.read();
+                }
+
+                @Override
+                public boolean isFinished() {
+                    return inputStream.available() == 0;
+                }
+
+                @Override
+                public boolean isReady() {
+                    return true;
+                }
+
+                @Override
+                public void setReadListener(ReadListener readListener) {
+                    // no-op for synchronous processing
+                }
+            };
+        }
+
+        @Override
+        public BufferedReader getReader() {
+            return new BufferedReader(new InputStreamReader(getInputStream(), StandardCharsets.UTF_8));
+        }
     }
 
     /**

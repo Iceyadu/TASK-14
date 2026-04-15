@@ -55,6 +55,7 @@ describe('Session expiry router guard behaviour', () => {
     const authStore = useAuthStore()
     authStore.clearSession()
 
+    await router.push('/dashboard')
     await router.push('/notifications/inbox')
     expect(router.currentRoute.value.name).toBe('Login')
   })
@@ -82,13 +83,14 @@ describe('Session expiry router guard behaviour', () => {
 
   it('redirects authenticated-then-expired user for teacher-level route', async () => {
     setAuthenticatedUser({ id: 10, username: 'teacher', role: 'HOMEROOM_TEACHER',
-      permissions: ['NOTIFICATION_VIEW', 'ROSTER_VIEW', 'EXAM_SESSION_VIEW', 'EXAM_SESSION_MANAGE'] })
+      permissions: ['NOTIFICATION_VIEW', 'ROSTER_VIEW', 'SESSION_VIEW', 'SESSION_CREATE'] })
     await router.push('/exam-sessions')
     expect(router.currentRoute.value.name).toBe('ExamSessionList')
 
     const authStore = useAuthStore()
     authStore.clearSession()
 
+    await router.push('/dashboard')
     await router.push('/exam-sessions')
     expect(router.currentRoute.value.name).toBe('Login')
   })

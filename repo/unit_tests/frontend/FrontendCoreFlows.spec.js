@@ -123,7 +123,8 @@ describe('Frontend core flows (real view components)', () => {
       global: {
         stubs: {
           DataTable: true,
-          StatusBadge: true
+          StatusBadge: true,
+          Teleport: false
         }
       }
     })
@@ -132,12 +133,17 @@ describe('Frontend core flows (real view components)', () => {
     await wrapper.find('button.btn-primary').trigger('click')
     await flushPromises()
 
-    const inputs = wrapper.findAll('.dialog-box input')
+    const dialog = document.body.querySelector('.dialog-box')
+    expect(dialog).toBeTruthy()
+    const inputs = dialog.querySelectorAll('input')
     expect(inputs.length).toBeGreaterThanOrEqual(3)
-    await inputs[0].setValue('teacher_new')
-    await inputs[1].setValue('Teacher New')
-    await inputs[2].setValue('Pass@12345678')
-    await wrapper.find('form').trigger('submit.prevent')
+    inputs[0].value = 'teacher_new'
+    inputs[0].dispatchEvent(new Event('input', { bubbles: true }))
+    inputs[1].value = 'Teacher New'
+    inputs[1].dispatchEvent(new Event('input', { bubbles: true }))
+    inputs[2].value = 'Pass@12345678'
+    inputs[2].dispatchEvent(new Event('input', { bubbles: true }))
+    dialog.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
     expect(fixtures.userApi.create).toHaveBeenCalledTimes(1)
@@ -145,6 +151,7 @@ describe('Frontend core flows (real view components)', () => {
       username: 'teacher_new',
       displayName: 'Teacher New'
     })
+    wrapper.unmount()
   })
 
   it('RosterList export flow calls rosterApi.export', async () => {

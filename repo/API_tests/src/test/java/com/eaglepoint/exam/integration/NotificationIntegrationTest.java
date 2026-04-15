@@ -9,8 +9,10 @@ import com.eaglepoint.exam.notifications.model.NotificationTargetType;
 import com.eaglepoint.exam.compliance.repository.ComplianceReviewRepository;
 import com.eaglepoint.exam.jobs.service.JobService;
 import com.eaglepoint.exam.notifications.repository.DeliveryStatusRepository;
+import com.eaglepoint.exam.notifications.repository.DndSettingRepository;
 import com.eaglepoint.exam.notifications.repository.InboxMessageRepository;
 import com.eaglepoint.exam.notifications.repository.NotificationRepository;
+import com.eaglepoint.exam.notifications.repository.SubscriptionSettingRepository;
 import com.eaglepoint.exam.security.model.User;
 import com.eaglepoint.exam.security.repository.SessionRepository;
 import com.eaglepoint.exam.security.repository.UserRepository;
@@ -79,6 +81,12 @@ class NotificationIntegrationTest {
     private ComplianceReviewRepository complianceReviewRepository;
 
     @Autowired
+    private DndSettingRepository dndSettingRepository;
+
+    @Autowired
+    private SubscriptionSettingRepository subscriptionSettingRepository;
+
+    @Autowired
     private JobService jobService;
 
     private static final String COORDINATOR_USERNAME = "coordinator_notif_test";
@@ -101,6 +109,8 @@ class NotificationIntegrationTest {
         inboxMessageRepository.deleteAll();
         deliveryStatusRepository.deleteAll();
         notificationRepository.deleteAll();
+        dndSettingRepository.deleteAll();
+        subscriptionSettingRepository.deleteAll();
 
         seedUserIfAbsent(COORDINATOR_USERNAME, "Notification Coordinator", Role.ACADEMIC_COORDINATOR);
         seedUserIfAbsent(ADMIN_USERNAME, "Notification Admin", Role.ADMIN);

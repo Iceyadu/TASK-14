@@ -34,6 +34,15 @@ public final class SigningTestHelper {
             MockHttpServletRequestBuilder builder,
             String signingKey, String method, String path, String body) {
 
+        String servletPath = path;
+        int queryIdx = path.indexOf('?');
+        if (queryIdx >= 0) {
+            servletPath = path.substring(0, queryIdx);
+        }
+        // Ensure MockMvc request exposes the same servletPath that the production
+        // signing filter uses for canonical signature verification.
+        builder.servletPath(servletPath);
+
         String timestamp = String.valueOf(Instant.now().getEpochSecond());
         String nonce = UUID.randomUUID().toString();
         String bodyHash = sha256Hex(body != null ? body : "");

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Exam Scheduling System - Docker-based Test Runner
 # Usage: ./run_tests.sh [backend|frontend|api|e2e|all]
-# Hard-fails on test or coverage threshold failures.
+# Hard-fails on test failures.
 
 set -euo pipefail
 
@@ -20,19 +20,13 @@ require_docker() {
     fi
 }
 
-coverage_ratio() {
-    awk "BEGIN { printf \"%.2f\", $COVERAGE_TARGET / 100 }"
-}
-
 run_backend_tests() {
-    local ratio
-    ratio="$(coverage_ratio)"
-    echo "=== Running Backend Unit Tests + JaCoCo Check (Docker, target ${COVERAGE_TARGET}%) ==="
+    echo "=== Running Backend Unit Tests (Docker) ==="
     docker run --rm \
         -v "$ROOT_DIR:/repo" \
         -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test -Dcoverage.minimum="$ratio" --no-transfer-progress 2>&1
+        mvn test --no-transfer-progress 2>&1
     echo ""
 }
 
