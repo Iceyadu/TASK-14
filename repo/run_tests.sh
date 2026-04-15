@@ -1,14 +1,13 @@
 #!/bin/bash
 # Exam Scheduling System - Docker-based Test Runner
-# Usage: ./run_tests.sh [backend|frontend|api|all]
-# Mounts the full repo so unit_tests/, API_tests/, and backend/ share one tree.
+# Usage: ./run_tests.sh [backend|frontend|api|e2e|all]
+# Hard-fails on test or coverage threshold failures.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$SCRIPT_DIR"
-BACKEND_DIR="$ROOT_DIR/backend"
-FRONTEND_DIR="$ROOT_DIR/frontend"
+COVERAGE_TARGET="${COVERAGE_TARGET:-95}"
 
 require_docker() {
     if ! command -v docker >/dev/null 2>&1; then
@@ -21,25 +20,30 @@ require_docker() {
     fi
 }
 
+coverage_ratio() {
+    awk "BEGIN { printf \"%.2f\", $COVERAGE_TARGET / 100 }"
+}
+
 run_backend_tests() {
-    echo "=== Running Backend Unit Tests (Docker, unit_tests/backend + default excludes) ==="
+    local ratio
+    ratio="$(coverage_ratio)"
+    echo "=== Running Backend Unit Tests + JaCoCo Check (Docker, target ${COVERAGE_TARGET}%) ==="
     docker run --rm \
         -v "$ROOT_DIR:/repo" \
         -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test --no-transfer-progress 2>&1 \
-        || echo "Backend unit tests completed with failures"
+        mvn test -Dcoverage.minimum="$ratio" --no-transfer-progress 2>&1
     echo ""
 }
 
 run_frontend_tests() {
-    echo "=== Running Frontend Unit Tests (Docker, unit_tests/frontend) ==="
+    echo "=== Running Frontend Unit Tests + Coverage (Docker, target ${COVERAGE_TARGET}%) ==="
     docker run --rm \
+        -e VITEST_COVERAGE_THRESHOLD="$COVERAGE_TARGET" \
         -v "$ROOT_DIR:/repo" \
         -w /repo/frontend \
         node:20-alpine \
-        sh -lc "npm ci && npx vitest run --reporter=verbose" 2>&1 \
-        || echo "Frontend tests completed with failures"
+        sh -lc "npm ci && npx vitest run --coverage --reporter=verbose" 2>&1
     echo ""
 }
 
@@ -49,8 +53,17 @@ run_api_tests() {
         -v "$ROOT_DIR:/repo" \
         -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test -Dtest='com.eaglepoint.exam.integration.**' --no-transfer-progress 2>&1 \
-        || echo "API tests completed with failures"
+        mvn test -Dtest='com.eaglepoint.exam.integration.**' --no-transfer-progress 2>&1
+    echo ""
+}
+
+run_e2e_tests() {
+    echo "=== Running Browser E2E Tests (Docker Compose + Playwright) ==="
+    trap 'docker compose down >/dev/null 2>&1 || true' RETURN
+    docker compose up -d mysql backend frontend
+    docker compose run --rm e2e
+    docker compose down
+    trap - RETURN
     echo ""
 }
 
@@ -66,14 +79,18 @@ case "${1:-all}" in
     api)
         run_api_tests
         ;;
+    e2e)
+        run_e2e_tests
+        ;;
     all)
         run_backend_tests
         run_frontend_tests
         run_api_tests
+        run_e2e_tests
         echo "=== All Tests Complete ==="
         ;;
     *)
-        echo "Usage: $0 [backend|frontend|api|all]"
+        echo "Usage: $0 [backend|frontend|api|e2e|all]"
         exit 1
         ;;
 esac

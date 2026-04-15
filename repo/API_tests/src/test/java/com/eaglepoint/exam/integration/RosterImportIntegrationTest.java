@@ -106,6 +106,8 @@ class RosterImportIntegrationTest {
 
     private static final String COORDINATOR_USERNAME = "coordinator_import_test";
     private static final String COORDINATOR_PASSWORD = "Coord@12345678";
+    private static final String ADMIN_USERNAME = "admin_import_test";
+    private static final String ADMIN_PASSWORD = "Admin@12345678";
     private static final String DEVICE_FINGERPRINT = "test-device-import-001";
 
     private static final String TERM_NAME = "Import Term Spring";
@@ -144,6 +146,18 @@ class RosterImportIntegrationTest {
             coordinator.setCreatedAt(LocalDateTime.now());
             coordinator.setUpdatedAt(LocalDateTime.now());
             userRepository.save(coordinator);
+        }
+        if (userRepository.findByUsername(ADMIN_USERNAME).isEmpty()) {
+            User admin = new User();
+            admin.setUsername(ADMIN_USERNAME);
+            admin.setPasswordHash(new BCryptPasswordEncoder(4).encode(ADMIN_PASSWORD));
+            admin.setFullName("Import Admin");
+            admin.setRole(Role.ADMIN);
+            admin.setAllowConcurrentSessions(false);
+            admin.setFailedLoginAttempts(0);
+            admin.setCreatedAt(LocalDateTime.now());
+            admin.setUpdatedAt(LocalDateTime.now());
+            userRepository.save(admin);
         }
 
         seedReferenceData();
@@ -226,6 +240,14 @@ class RosterImportIntegrationTest {
                 import_stu_1,%s,%s,ID103,parent@example.com,notes
                 import_stu_1,%s,%s,ID104,parent@example.com,notes
                 """.formatted(CLASS_NAME, TERM_NAME, CLASS_NAME, TERM_NAME, TERM_NAME, CLASS_NAME, TERM_NAME, CLASS_NAME, TERM_NAME);
+    }
+
+    private String buildMixedCsvContent() {
+        return """
+                student_username,class_name,term_name,student_id_number,guardian_contact,accommodation_notes
+                import_stu_1,%s,%s,ID900,parent900@example.com,none
+                missing_user_abc,%s,%s,ID901,parent901@example.com,none
+                """.formatted(CLASS_NAME, TERM_NAME, CLASS_NAME, TERM_NAME);
     }
 
     @Test
@@ -347,5 +369,70 @@ class RosterImportIntegrationTest {
         long countAfterSecondCommit = rosterEntryRepository.count();
 
         assertThat(countAfterSecondCommit).isEqualTo(countAfterFirstCommit);
+    }
+
+    @Test
+    void testMixedImportCommitsOnlyValidRows() throws Exception {
+        String token = login(COORDINATOR_USERNAME, COORDINATOR_PASSWORD);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "roster_mixed.csv",
+                "text/csv",
+                buildMixedCsvContent().getBytes(StandardCharsets.UTF_8));
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/rosters/import/upload")
+                        .file(file)
+                        .param("entityType", "RosterEntry")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode previewJson = objectMapper.readTree(uploadResult.getResponse().getContentAsString());
+        Long jobId = previewJson.get("data").get("jobId").asLong();
+        assertThat(previewJson.get("data").get("validRows").size()).isEqualTo(1);
+        assertThat(previewJson.get("data").get("invalidRows").size()).isEqualTo(1);
+
+        long before = rosterEntryRepository.count();
+        mockMvc.perform(post("/api/rosters/import/" + jobId + "/commit")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+        long after = rosterEntryRepository.count();
+        assertThat(after - before).isEqualTo(1);
+    }
+
+    @Test
+    void testAdminRollbackTransitionsJobToRolledBack() throws Exception {
+        String coordinatorToken = login(COORDINATOR_USERNAME, COORDINATOR_PASSWORD);
+        String adminToken = login(ADMIN_USERNAME, ADMIN_PASSWORD);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "roster_rollback.csv",
+                "text/csv",
+                buildValidCsvContent().getBytes(StandardCharsets.UTF_8));
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/rosters/import/upload")
+                        .file(file)
+                        .param("entityType", "RosterEntry")
+                        .header("Authorization", "Bearer " + coordinatorToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Long jobId = objectMapper.readTree(uploadResult.getResponse().getContentAsString())
+                .get("data").get("jobId").asLong();
+
+        long beforeCommit = rosterEntryRepository.count();
+        mockMvc.perform(post("/api/rosters/import/" + jobId + "/commit")
+                        .header("Authorization", "Bearer " + coordinatorToken))
+                .andExpect(status().isOk());
+        long afterCommit = rosterEntryRepository.count();
+        assertThat(afterCommit).isGreaterThan(beforeCommit);
+
+        mockMvc.perform(post("/api/rosters/import/" + jobId + "/rollback")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        var rolledBackJob = importJobRepository.findById(jobId).orElseThrow();
+        assertThat(rolledBackJob.getStatus().name()).isEqualTo("ROLLED_BACK");
     }
 }

@@ -153,30 +153,21 @@ class NotificationServiceTest {
     }
 
     @Test
-    void testDndSuppression() {
-        // DND is handled at delivery time, not in the service layer directly.
-        // The DndSetting exists for the student -> delivery service checks it.
-        DndSetting dnd = new DndSetting();
-        dnd.setStudentUserId(10L);
-        dnd.setDndStart(java.time.LocalTime.of(22, 0));
-        dnd.setDndEnd(java.time.LocalTime.of(7, 0));
+    void testCancelQueuedNotificationAllowed() {
+        Notification notification = createNotification(1L, NotificationStatus.QUEUED);
+        when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(targetRepository.findByNotificationId(1L)).thenReturn(Collections.emptyList());
 
-        when(dndSettingRepository.findByStudentUserId(10L)).thenReturn(Optional.of(dnd));
-
-        // Verify the DND setting exists and would suppress delivery
-        Optional<DndSetting> found = dndSettingRepository.findByStudentUserId(10L);
-        assertTrue(found.isPresent());
-        assertEquals(java.time.LocalTime.of(22, 0), found.get().getDndStart());
+        NotificationResponse response = notificationService.cancelNotification(1L);
+        assertEquals(NotificationStatus.CANCELED, response.getStatus());
     }
 
     @Test
-    void testWeChatFallbackToInbox() {
-        // When WeChat is disabled, notification status becomes FALLBACK_TO_IN_APP
-        // which triggers inbox message creation in the delivery service.
-        // The service layer handles inbox creation via the delivery pipeline.
-        // This test verifies the FALLBACK_TO_IN_APP status transition is valid.
-        assertTrue(NotificationStatus.FAILED.canTransitionTo(NotificationStatus.FALLBACK_TO_IN_APP));
-        assertTrue(NotificationStatus.SENDING.canTransitionTo(NotificationStatus.FALLBACK_TO_IN_APP));
+    void testCancelDeliveredNotificationBlocked() {
+        Notification notification = createNotification(1L, NotificationStatus.DELIVERED);
+        when(notificationRepository.findById(1L)).thenReturn(Optional.of(notification));
+        assertThrows(StateTransitionException.class, () -> notificationService.cancelNotification(1L));
     }
 
     @Test

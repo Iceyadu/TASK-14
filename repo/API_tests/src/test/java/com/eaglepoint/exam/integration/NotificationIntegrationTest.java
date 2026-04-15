@@ -150,6 +150,28 @@ class NotificationIntegrationTest {
         return request;
     }
 
+    private Long findReviewId(String adminToken) throws Exception {
+        MvcResult reviewsResult = mockMvc.perform(get("/api/compliance/reviews")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode reviewsJson = objectMapper.readTree(reviewsResult.getResponse().getContentAsString());
+        JsonNode reviewsList = reviewsJson.get("data");
+        assertThat(reviewsList.size()).isGreaterThan(0);
+        return reviewsList.get(0).get("id").asLong();
+    }
+
+    private void approveReview(Long reviewId, String adminToken, String comment) throws Exception {
+        ReviewDecisionRequest approveRequest = new ReviewDecisionRequest();
+        approveRequest.setComment(comment);
+        String approveBody = objectMapper.writeValueAsString(approveRequest);
+        mockMvc.perform(post("/api/compliance/reviews/" + reviewId + "/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(approveBody)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+    }
+
     @Test
     void testNotificationToInboxFallback() throws Exception {
         // Individual-target notifications require an administrator to create
@@ -178,26 +200,8 @@ class NotificationIntegrationTest {
         sessionRepository.deleteAll();
         String adminToken = login(ADMIN_USERNAME, DEVICE_FP_ADMIN);
 
-        // Find the pending review
-        MvcResult reviewsResult = mockMvc.perform(get("/api/compliance/reviews")
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        JsonNode reviewsJson = objectMapper.readTree(reviewsResult.getResponse().getContentAsString());
-        JsonNode reviewsList = reviewsJson.get("data");
-        assertThat(reviewsList.size()).isGreaterThan(0);
-        Long reviewId = reviewsList.get(0).get("id").asLong();
-
-        ReviewDecisionRequest approveRequest = new ReviewDecisionRequest();
-        approveRequest.setComment("Approved for delivery");
-        String approveBody = objectMapper.writeValueAsString(approveRequest);
-
-        mockMvc.perform(post("/api/compliance/reviews/" + reviewId + "/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(approveBody)
-                        .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+        Long reviewId = findReviewId(adminToken);
+        approveReview(reviewId, adminToken, "Approved for delivery");
 
         // Step 4: Publish the notification
         mockMvc.perform(post("/api/notifications/" + notificationId + "/publish")
@@ -216,9 +220,11 @@ class NotificationIntegrationTest {
 
         JsonNode deliveryJson = objectMapper.readTree(deliveryResult.getResponse().getContentAsString());
         JsonNode deliveryEntries = deliveryJson.get("data");
-        // Delivery should have been attempted; in test profile WeChat is disabled so
-        // we expect either FALLBACK_TO_IN_APP or DELIVERED status
         assertThat(deliveryEntries).isNotNull();
+        assertThat(deliveryEntries.size()).isEqualTo(1);
+        JsonNode entry = deliveryEntries.get(0);
+        assertThat(entry.get("channel").asText()).isEqualTo("IN_APP");
+        assertThat(entry.get("status").asText()).isEqualTo("fallback_delivered");
 
         // Step 6: Verify inbox message created for target student
         sessionRepository.deleteAll();
@@ -231,7 +237,8 @@ class NotificationIntegrationTest {
 
         JsonNode inboxJson = objectMapper.readTree(inboxResult.getResponse().getContentAsString());
         JsonNode inboxMessages = inboxJson.get("data");
-        assertThat(inboxMessages.size()).isGreaterThan(0);
+        assertThat(inboxMessages.size()).isEqualTo(1);
+        assertThat(inboxMessages.get(0).get("title").asText()).isEqualTo("Schedule Change Notice");
     }
 
     @Test
@@ -284,21 +291,8 @@ class NotificationIntegrationTest {
         sessionRepository.deleteAll();
         String adminToken2 = login(ADMIN_USERNAME, DEVICE_FP_ADMIN);
 
-        MvcResult reviewsResult = mockMvc.perform(get("/api/compliance/reviews")
-                        .header("Authorization", "Bearer " + adminToken2))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        JsonNode reviewsJson = objectMapper.readTree(reviewsResult.getResponse().getContentAsString());
-        Long reviewId = reviewsJson.get("data").get(0).get("id").asLong();
-
-        ReviewDecisionRequest approveRequest = new ReviewDecisionRequest();
-        approveRequest.setComment("Approved");
-        mockMvc.perform(post("/api/compliance/reviews/" + reviewId + "/approve")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(approveRequest))
-                        .header("Authorization", "Bearer " + adminToken2))
-                .andExpect(status().isOk());
+        Long reviewId = findReviewId(adminToken2);
+        approveReview(reviewId, adminToken2, "Approved");
 
         mockMvc.perform(post("/api/notifications/" + notificationId + "/publish")
                         .header("Authorization", "Bearer " + adminToken2))
@@ -318,5 +312,55 @@ class NotificationIntegrationTest {
         JsonNode inboxJson = objectMapper.readTree(inboxResult.getResponse().getContentAsString());
         JsonNode inboxMessages = inboxJson.get("data");
         assertThat(inboxMessages.size()).isEqualTo(0);
+    }
+
+    @Test
+    void testNotificationDndHeldDeliveryStatus() throws Exception {
+        // Student configures DND to always cover current time
+        String studentToken = login(STUDENT_A_USERNAME, DEVICE_FP_STU_A);
+        String dndBody = """
+                {
+                  "subscriptions": {"SCHEDULE_CHANGE": true},
+                  "dndStartTime": "00:00:00",
+                  "dndEndTime": "23:59:00"
+                }
+                """;
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/notifications/subscriptions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(dndBody)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isOk());
+
+        // Admin creates + submits + approves + publishes
+        sessionRepository.deleteAll();
+        String adminToken = login(ADMIN_USERNAME, DEVICE_FP_ADMIN);
+        MvcResult createResult = mockMvc.perform(post("/api/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildNotificationRequest(studentAId)))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        Long notificationId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .get("data").get("id").asLong();
+
+        mockMvc.perform(post("/api/notifications/" + notificationId + "/submit-review")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+        approveReview(findReviewId(adminToken), adminToken, "DND case approved");
+        mockMvc.perform(post("/api/notifications/" + notificationId + "/publish")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk());
+
+        jobService.processNextJob();
+
+        MvcResult deliveryResult = mockMvc.perform(get("/api/notifications/delivery-status")
+                        .param("notificationId", notificationId.toString())
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode deliveryEntries = objectMapper.readTree(deliveryResult.getResponse().getContentAsString()).get("data");
+        assertThat(deliveryEntries.size()).isEqualTo(1);
+        assertThat(deliveryEntries.get(0).get("channel").asText()).isEqualTo("IN_APP");
+        assertThat(deliveryEntries.get(0).get("status").asText()).isEqualTo("delivered_dnd_held");
     }
 }
