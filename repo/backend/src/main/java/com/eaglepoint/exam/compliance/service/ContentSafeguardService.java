@@ -37,13 +37,14 @@ public class ContentSafeguardService {
      */
     private static final Set<String> BLOCKED_TERMS = Set.of(
             "violence", "explicit", "abuse", "drug", "narcotic",
-            "gambling", "weapon", "harassment", "threat"
+            "gambling", "weapon", "harassment", "threat", "hate"
     );
 
     /** Patterns that may indicate PII leaking into free-text content fields. */
     private static final List<Pattern> PII_PATTERNS = List.of(
             Pattern.compile("\\b\\d{3}-\\d{2}-\\d{4}\\b"),     // SSN-like
             Pattern.compile("\\b\\d{15,19}\\b"),                 // credit card-like
+            Pattern.compile("\\b\\d{3}-\\d{4}-\\d{4}\\b"),      // phone number-like
             Pattern.compile("[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}") // email
     );
 
