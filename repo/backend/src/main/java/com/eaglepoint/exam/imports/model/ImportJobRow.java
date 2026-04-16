@@ -21,7 +21,7 @@ public class ImportJobRow {
     @Column(name = "import_job_id", nullable = false)
     private Long importJobId;
 
-    @Column(name = "row_number", nullable = false)
+    @Column(name = "row_num", nullable = false)
     private int rowNumber;
 
     @Column(name = "row_data", nullable = false, columnDefinition = "json")

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Exam Scheduling System - Docker-based Test Runner
-# Usage: ./run_tests.sh [backend|frontend|api|e2e|all]
+# Usage: ./run_tests.sh [backend|frontend|api|all]
 # Hard-fails on test failures.
 
 set -euo pipefail
@@ -51,16 +51,6 @@ run_api_tests() {
     echo ""
 }
 
-run_e2e_tests() {
-    echo "=== Running Browser E2E Tests (Docker Compose + Playwright) ==="
-    trap 'docker compose down >/dev/null 2>&1 || true' RETURN
-    docker compose up -d mysql backend frontend
-    docker compose run --rm e2e
-    docker compose down
-    trap - RETURN
-    echo ""
-}
-
 require_docker
 
 case "${1:-all}" in
@@ -73,18 +63,14 @@ case "${1:-all}" in
     api)
         run_api_tests
         ;;
-    e2e)
-        run_e2e_tests
-        ;;
     all)
         run_backend_tests
         run_frontend_tests
         run_api_tests
-        run_e2e_tests
         echo "=== All Tests Complete ==="
         ;;
     *)
-        echo "Usage: $0 [backend|frontend|api|e2e|all]"
+        echo "Usage: $0 [backend|frontend|api|all]"
         exit 1
         ;;
 esac

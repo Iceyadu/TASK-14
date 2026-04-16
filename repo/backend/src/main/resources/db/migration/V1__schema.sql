@@ -345,7 +345,7 @@ CREATE TABLE import_jobs (
 CREATE TABLE import_job_rows (
     id              BIGINT          AUTO_INCREMENT PRIMARY KEY,
     import_job_id   BIGINT          NOT NULL,
-    row_number      INT             NOT NULL,
+    row_num         INT             NOT NULL,
     row_data        JSON            NOT NULL,
     is_valid        BOOLEAN         NOT NULL DEFAULT TRUE,
     error_details   JSON            NULL,
