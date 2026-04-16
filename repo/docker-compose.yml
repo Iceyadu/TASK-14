@@ -59,7 +59,7 @@ services:
     volumes:
       - ./:/repo
     entrypoint: ["/bin/sh", "-lc"]
-    command: "npm ci && for i in $(seq 1 45); do curl -sf http://frontend >/dev/null && break; sleep 2; done && npx playwright test --config /repo/E2E_tests/playwright.config.js"
+    command: "npm ci && for i in $$(seq 1 45); do curl -sf http://frontend >/dev/null && break; sleep 2; done && npx playwright test --config /repo/E2E_tests/playwright.config.js"
     networks:
       - exam-net
 
