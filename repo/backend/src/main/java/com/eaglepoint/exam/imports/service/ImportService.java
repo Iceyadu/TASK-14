@@ -25,6 +25,7 @@ import com.eaglepoint.exam.shared.exception.EntityNotFoundException;
 import com.eaglepoint.exam.shared.exception.StateTransitionException;
 import com.eaglepoint.exam.versioning.service.VersionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -533,10 +534,37 @@ public class ImportService {
         return "CSV";
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, String> deserializeRowData(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
         try {
-            return objectMapper.readValue(json, Map.class);
+            JsonNode root = objectMapper.readTree(json);
+            // H2 JSON columns (and some JDBC JSON bindings) may round-trip row objects as a JSON
+            // *string* value; unwrap one or more textual layers before reading fields.
+            while (root != null && root.isTextual()) {
+                String inner = root.asText();
+                if (inner == null || inner.isBlank()) {
+                    return Map.of();
+                }
+                root = objectMapper.readTree(inner);
+            }
+            if (root == null || !root.isObject()) {
+                log.warn("Row data JSON is not a JSON object: {}", json);
+                return Map.of();
+            }
+            Map<String, String> result = new HashMap<>();
+            root.fields().forEachRemaining(entry -> {
+                JsonNode v = entry.getValue();
+                if (v == null || v.isNull()) {
+                    result.put(entry.getKey(), "");
+                } else if (v.isValueNode()) {
+                    result.put(entry.getKey(), v.asText());
+                } else {
+                    result.put(entry.getKey(), v.toString());
+                }
+            });
+            return result;
         } catch (JsonProcessingException e) {
             log.error("Failed to deserialize row data JSON", e);
             return Map.of();
