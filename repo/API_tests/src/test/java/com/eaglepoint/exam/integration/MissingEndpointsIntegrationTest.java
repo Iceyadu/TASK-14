@@ -234,7 +234,18 @@ class MissingEndpointsIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andReturn();
-        Long reviewId = objectMapper.readTree(reviews.getResponse().getContentAsString()).get("data").get(0).get("id").asLong();
+        JsonNode reviewsJson = objectMapper.readTree(reviews.getResponse().getContentAsString());
+        Long reviewId = null;
+        for (JsonNode review : reviewsJson.get("data")) {
+            if ("Notification".equals(review.get("entityType").asText())
+                    && notifId.equals(review.get("entityId").asLong())) {
+                reviewId = review.get("id").asLong();
+                break;
+            }
+        }
+        if (reviewId == null) {
+            throw new IllegalStateException("Could not find compliance review for notification " + notifId);
+        }
         mockMvc.perform(get("/api/compliance/reviews/" + reviewId).header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/compliance/reviews/" + reviewId + "/reject")

@@ -26,7 +26,7 @@ run_backend_tests() {
         -v "$ROOT_DIR:/repo" \
         -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test --no-transfer-progress 2>&1
+        mvn clean test --no-transfer-progress 2>&1
     echo ""
 }
 
@@ -47,7 +47,7 @@ run_api_tests() {
         -v "$ROOT_DIR:/repo" \
         -w /repo/backend \
         maven:3.9.6-eclipse-temurin-17 \
-        mvn test -Dtest='com.eaglepoint.exam.integration.**' --no-transfer-progress 2>&1
+        mvn clean test -Dtest='com.eaglepoint.exam.integration.**' --no-transfer-progress 2>&1
     echo ""
 }
 
